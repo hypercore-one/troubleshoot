@@ -35,6 +35,26 @@ else
     CURL_URL="http://$CURL_ENDPOINT"
 fi
 
+# Function to decrypt .env.gpg file and load environment variables
+function load_env_variables() {
+    if [ -f .env.gpg ]; then
+        echo "Please enter the password to decrypt the .env file:"
+        decrypted_env=$(gpg --quiet --decrypt .env.gpg 2>/dev/null)
+        if [ $? -eq 0 ]; then
+            # Export the variables
+            export $(echo "$decrypted_env" | xargs)
+        else
+            echo "Failed to decrypt .env file. Exiting."
+            exit 1
+        fi
+    else
+        echo "Encrypted .env.gpg file not found. Skipping sending report to Telegram."
+    fi
+}
+
+# Load environment variables from encrypted .env.gpg file
+load_env_variables
+
 # Redirect all output to both console and the output file
 exec > >(tee -a "$OUTPUT_FILE") 2> >(tee -a "$OUTPUT_FILE" >&2)
 
@@ -63,13 +83,6 @@ function detect_package_manager() {
     fi
 }
 
-# Load environment variables from .env file
-if [ -f .env ]; then
-    set -o allexport
-    source .env
-    set +o allexport
-fi
-
 # List of required commands and their corresponding packages
 declare -A required_commands=(
     ["netstat"]="net-tools"
@@ -78,6 +91,7 @@ declare -A required_commands=(
     ["lsb_release"]="lsb-release"
     ["curl"]="curl"
     ["journalctl"]="systemd"  # journalctl is part of systemd
+    ["gpg"]="gnupg"
 )
 
 # Check and install missing commands
@@ -253,3 +267,7 @@ fi
 
 echo ""
 echo "========== End of Troubleshooting Script =========="
+
+# Unset sensitive environment variables
+unset TELEGRAM_BOT_TOKEN
+unset TELEGRAM_CHAT_ID

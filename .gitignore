@@ -1,0 +1,8 @@
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Just in case there are backup files
+*.env.backup
+*.env.bak 
